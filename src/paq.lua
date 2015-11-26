@@ -2,7 +2,7 @@
 -- author: exploser (Pavel Vasilev)
 -- exploser@exsdev.ru, explosere@ya.ru
 
-local VERSION = "0.1a-test"
+local VERSION = "0.1.2"
 local binname = "paq"
 local configpath = "/etc/" .. binname .. "/"
 local librarypath = "/lib/" .. binname .. "/"
@@ -36,9 +36,18 @@ local function init()
 end
 
 local function get(authorname, paqname)
+  authorname = authorname or "exploser"
+  
+  if(installed[authorname]) then
+    if(installed[authorname][paqname]) then
+      io.write(string.format("Package %s:%s is already installed! Use '%s delete %s %s' to remove it.\n", authorname, paqname, binname, authorname, paqname))
+      return
+    end
+  end
+  
   local masterurl = "https://raw.githubusercontent.com/" .. authorname .. "/" .. paqname .. "/master/"
   local infourl = masterurl .. "package.txt"
-  io.write("Retrieving " .. infourl .. "...\n")
+  io.write(string.format("Retrieving %s...\n", infourl))
   local result, response = pcall(internet.request, infourl)
   if result then
     local str = ""
@@ -53,17 +62,19 @@ local function get(authorname, paqname)
     local index = string.find(t["binname"], "/[^/]*$") or 0
     local filename = string.sub(t["binname"], index + 1)
     
-    if fs.exists("/bin/" .. filename) then
-      fs.remove("/bin/" .. filename)
+    if(fs.exists("/bin/" .. filename)) then
+      io.stderr:write(string.format("File /bin/%s already exists! Try removing it by hand. %s does not delete existing files if it didn't install them.\n", filename, binname))
+      return
     end
     
-    os.execute("wget " .. binurl .. " /bin/" .. filename)
+    os.execute(string.format("wget %s /bin/%s", binurl, filename))
     io.write("adding to table...\n")
-    installed[authorname .. ":" .. paqname .. ":bin" ] = "/bin/" .. filename
-    installed[authorname .. ":" .. paqname .. ":repo"] = repo
-    --installed[authorname .. ":" .. paqname].lib = librarypath .. paqname .. "/"
+    installed[authorname] = {}
+    installed[authorname][paqname] = {}
+    installed[authorname][paqname].bin = "/bin/" .. filename
+    installed[authorname][paqname].repo = repo
+    installed[authorname][paqname].version = 0
     
-
   end
 end
 
@@ -71,7 +82,20 @@ local function install()
   get("exploser", "paq")
 end
 
-
+local function save()
+  for k, v in pairs( installed ) do
+    if(not v.bin and not v.repo) then
+      installed[k] = nil
+    end
+  end
+  
+  f = io.open(configpath .. "paqs.tb", "w")
+  outp = serialization.serialize(installed)
+  
+  f:write(outp)
+  f:flush()
+  f:close()
+end
 
 local function main(args)
   if not component.isAvailable("internet") then
@@ -99,17 +123,17 @@ local function main(args)
     local authorname = args[2]
     local paqname = args[3]
     
-    if installed[authorname .. ":" .. paqname .. ":bin"] then
-      fs.remove(installed[authorname .. ":" .. paqname .. ":bin"])
-      installed[authorname .. ":" .. paqname .. ":bin"] = nil
+    if installed[authorname][paqname]["bin"] then
+      fs.remove(installed[authorname][paqname]["bin"])
+      installed[authorname][paqname]["bin"] = nil
       io.write("Package " .. paqname .. " was successfully removed!")
     else
       io.write("Could not find binary for package " .. paqname .. "!")
     end
     
-    if installed[authorname .. ":" .. paqname .. ":repo"] then
-      fs.remove(installed[authorname .. ":" .. paqname .. ":repo"])
-      installed[authorname .. ":" .. paqname .. ":repo"] = nil
+    if installed[authorname][paqname]["repo"] then
+      fs.remove(installed[authorname][paqname]["repo"])
+      installed[authorname][paqname]["repo"] = nil
     else
       io.write("Could not find repository for package " .. paqname .. "!")
     end
@@ -118,20 +142,14 @@ local function main(args)
     if(installed[args[2]]) then
       io.write(installed[args[2]].repo)
     end
-  end
-  
-  for k, v in pairs( installed ) do
-    if(not string.find(k, ":bin") and not string.find(k, ":repo")) then
-      installed[k] = nil
+  elseif args[1] == "list" then
+    for k, v in pairs( installed ) do
+      print(k)
     end
   end
   
-  f = io.open(configpath .. "paqs.tb", "w")
-  outp = serialization.serialize(installed)
   
-  f:write(outp)
-  f:flush()
-  f:close()
+  save()
     
 end
 
