@@ -53,6 +53,8 @@ elseif args[1] == "get" then
   if result then
     local t = serialization.unserialize(response())
     local binurl = masterurl .. t["binname"]
+    io.write("Creating local repo directory " .. repositorypath .. paqname)
+    fs.makeDirectory(repositorypath .. paqname)
     os.execute("wget " .. binurl .. " " .. repositorypath .. paqname .. "/")
   end
   
