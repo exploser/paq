@@ -13,6 +13,7 @@ local fs = require("filesystem")
 local internet = require("internet")
 local shell = require("shell")
 local text = require("text")
+local serialization = require("serialization")
 
 if not component.isAvailable("internet") then
   io.stderr:write("This program requires an internet card to run.")
@@ -43,7 +44,17 @@ if args[1] == "install" then
   end
   
 elseif args[1] == "get" then
-  local paqname = args[2]
+  local authorname = args[2]
+  local paqname = args[3]
+  local masterurl = "https://raw.githubusercontent.com/" .. authorname .. "/" .. paqname .. "/master/"
+  local infourl = masterurl .. "package.txt"
+  io.write("Retrieving " .. infourl .. "...")
+  local result, response = pcall(internet.request, infourl)
+  if result then
+    local t = serialization.unserialize(response())
+    local binurl = masterurl .. t["binname"]
+    os.execute("wget " .. binurl .. " " .. repositorypath .. paqname .. "/")
+  end
   
 elseif args[1] == "version" then
   io.write(VERSION)
