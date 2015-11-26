@@ -20,7 +20,7 @@ local function usage()
   io.write("Usage: " .. binname .. " command [argument]\n")
   io.write("Commands:\n")
   io.write(" installpaq\t\t\tinstall this tool to system\n")
-  io.write(" install user paqname\tinstall package <paqname> from Github user <user>\n")
+  io.write(" install user paqname\t\tinstall package <paqname> from Github user <user>\n")
   io.write(" version\t\t\tprint " .. binname .. " version\n")
 end
 
