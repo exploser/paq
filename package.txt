@@ -1,1 +1,8 @@
-{binname="src/paq.lua",version="0.1"}
+{
+files=
+{
+["src/paq.lua"]="/usr/bin/paq.lua",
+["src/libpaq.lua"]="/lib/libpaq.lua"
+}
+version="0.1.3"
+}
