@@ -1,8 +1,8 @@
 {                                                 \
   files=                                          \
   {                                               \
-    ['src/paq.lua']='/usr/bin/paq.lua',           \
-    ['src/libpaq.lua']="/lib/libpaq.lua'          \
+    ["src/paq.lua"]="/usr/bin/paq.lua",           \
+    ["src/libpaq.lua"]="/lib/libpaq.lua"          \
   },                                              \
-  version='0.1.3'                                 \
+  version="0.1.3"                                 \
 }
