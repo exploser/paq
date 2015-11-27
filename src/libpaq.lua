@@ -66,25 +66,33 @@ function paq.get(paqname, authorname)
       
       installed[paqname] = {}
       installed[paqname].files = {}
-      
-      for file, dest in pairs(t.files) do
-        --local index = string.find(file, "/[^/]*$") or 0
-        --local filename = string.sub(file, index + 1)
-        if(fs.exists(dest)) then
-          io.stderr:write(string.format("File %s already exists! Try removing it by hand. %s does not delete existing files if it didn't install them.\n", dest, binname))
-          installed[paqname] = nil
-          return
-        end
-        
-        os.execute(string.format("wget %s %s", masterurl .. file, dest))
-        table.insert(installed[paqname].files, dest)
-      end
-      
-      io.write("adding to table...\n")
       installed[paqname].repo = repo
       installed[paqname].version = t.version
       installed[paqname].author = authorname
       installed[paqname].dependencies = t.dependencies
+      
+      for file, dest in pairs(t.files) do
+        if(fs.exists(dest)) then
+          io.stderr:write(string.format("File %s already exists! Try removing it by hand. %s does not delete existing files if it didn't install them.\n", dest, binname))
+          io.write("Rolling back install...\n")
+          paq.remove(paqname)
+          return
+        else
+          fs.makeDirectory(fs.path(dest))
+          os.execute(string.format("wget %s %s", masterurl .. file, dest))
+          table.insert(installed[paqname].files, dest)
+        end
+      end
+      
+      if installed[paqname].dependencies then
+        io.write("Installing dependencies...\n")
+        for i, dep in pairs(installed[paqname].dependencies) do
+          if not installed[dep.name] then
+            paq.get(dep.name, dep.author)
+          end
+        end
+      end
+      
     else
       io.stderr:write("Could not parse package info!\n"..str.."\n")
     end
@@ -111,19 +119,16 @@ end
 
 function paq.remove(paqname)
   if installed[paqname] then
-    if installed[paqname].main then
-      fs.remove(installed[paqname].main)
-      
-      if installed[paqname].repo then
-        fs.remove(installed[paqname].repo)
-      end
-      
-      io.write(string.format("Package %s:%s was successfully removed!\n", installed[paqname].author, paqname))
-      installed[paqname] = nil
-    else
-      io.stderr:write("Could not find binary for package " .. paqname .. ", removing it from database.\n")
-      installed[paqname] = nil
+    for k,v in pairs(installed[paqname].files) do
+      fs.remove(v)
     end
+      
+    if installed[paqname].repo then
+      fs.remove(installed[paqname].repo)
+    end
+    
+    io.write(string.format("Package %s:%s was successfully removed!\n", installed[paqname].author, paqname))
+    installed[paqname] = nil
   else
     io.write("Package " .. paqname .. " is not installed.")
   end
